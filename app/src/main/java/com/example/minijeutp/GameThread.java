@@ -1,9 +1,10 @@
 package com.example.minijeutp;
 
 import android.view.SurfaceHolder;
-
+import android.graphics.Canvas;
 public class GameThread extends Thread {
     private SurfaceHolder surfaceHolder;
+    private volatile boolean running = false;
     private GameView gameView;
     public GameThread(SurfaceHolder surfaceHolder, GameView
             gameView) {
@@ -17,7 +18,7 @@ public class GameThread extends Thread {
     @Override
     public void run() {
         while (running) {
-            canvas = null;
+            Canvas canvas = null;
             try {
                 canvas = this.surfaceHolder.lockCanvas();
                 synchronized(surfaceHolder) {
