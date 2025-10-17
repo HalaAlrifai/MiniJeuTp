@@ -7,6 +7,11 @@ import android.graphics.Paint;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+
 import com.example.minijeutp.entity.Platform;
 import com.example.minijeutp.entity.Player;
 
@@ -14,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class GameView extends SurfaceView implements SurfaceHolder.Callback {
+public class GameView extends SurfaceView implements SurfaceHolder.Callback, SensorEventListener{
     private GameThread thread;
     private int x =0;
     private Player player;
@@ -22,13 +27,21 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private List<Platform> platforms = new ArrayList<>();
 
 
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private float ax = 0; // valeur actuelle du capteur
+
     public GameView(Context context) {
         super(context);
         getHolder().addCallback(this);
         thread = new GameThread(getHolder(), this);
         setFocusable(true);
 
-
+        // Capteur d’accélération
+        sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
     }
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int
@@ -40,9 +53,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         thread.start();
         screenWidth = getWidth();
         screenHeight = getHeight();
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        }
 
         platforms.clear();
-        int numPlatforms = 18;
+        int numPlatforms = 10;
         float platformWidth = screenWidth / 5f;
         float platformHeight = 20f;
         float verticalSpacing = screenHeight / numPlatforms;
@@ -76,6 +92,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             }
             retry = false;
         }
+        sensorManager.unregisterListener(this);
     }
     @Override
     public void draw(Canvas canvas) {
@@ -99,17 +116,27 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 //        canvas.drawRect(x, 100, x + 80, 180, paint);
     }
     public void update() {
+        if (player != null) {
+            player.update(platforms);
+
+            // Déplacement horizontal selon le capteur
+            player.x -= ax * 5; // ajuster le 5 pour la sensibilité
+
+            // Gérer les bords de l’écran (wrap-around comme Doodle Jump)
+            if (player.x < -player.width) {
+                player.x = screenWidth;
+            } else if (player.x > screenWidth) {
+                player.x = -player.width;
+            }
+        }
+    }
        // x = (x + 1) % 300;
 //        for (Platform p : platforms) {
 //            p.y += 2; // move downward slowly
 //            if (p.y > getHeight()) {
 //                p.y = 0;
 //                p.x = (float) (Math.random() * getWidth());
-//            }
-//        }
-        player.update();
 
-    }
     private void drawBackground(Canvas canvas) {
         int width = getWidth();
         int height = getHeight();
@@ -135,5 +162,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         marginPaint.setColor(Color.rgb(210, 220, 255));
         canvas.drawRect(0, 0, width, 60, marginPaint);
     }
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            ax = event.values[0]; // valeur de l’inclinaison
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // pas nécessaire ici
+    }
+
 
 }

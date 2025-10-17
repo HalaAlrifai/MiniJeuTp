@@ -5,6 +5,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import com.example.minijeutp.GameView;
 
+import java.util.List;
+
 public class Player {
     public float x, y, width, height;
     public float vy = 0;        // vitesse verticale
@@ -18,18 +20,30 @@ public class Player {
         this.height = height;
     }
 
-    public void update() {
-        // Applique la gravité
+    public void update(List<Platform> platforms) {
+        // gravité
         vy += gravity;
         y += vy;
 
-        // Empêche de descendre sous le bas de l'écran
-        if (y + height > GameView.screenHeight) {
+        // vérifie les collisions avec les plateformes
+        for (Platform p : platforms) {
+            boolean withinX = x + width > p.x && x < p.x + p.width;
+            boolean hittingTop = y + height >= p.y && y + height <= p.y + vy + 10;
+            if (withinX && hittingTop && vy > 0) {
+                // rebond sur la plateforme
+                y = p.y - height;
+                vy = -25; // rebond vers le haut
+                jumping = true;
+            }
+        }
+
+
+        if (y > GameView.screenHeight) {
             y = GameView.screenHeight - height;
-            vy = 0;
-            jumping = false;
+            vy = -25; // saute à nouveau
         }
     }
+
 
     public void jump() {
         if (!jumping) {
