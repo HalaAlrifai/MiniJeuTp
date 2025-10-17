@@ -17,6 +17,8 @@ import java.util.List;
 public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private GameThread thread;
     private int x =0;
+    private Player player;
+    public static int screenWidth, screenHeight;
     private List<Platform> platforms = new ArrayList<>();
 
 
@@ -35,8 +37,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public void surfaceCreated(SurfaceHolder holder) {
         thread.setRunning(true);
         thread.start();
-        int screenWidth = getWidth();
-        int screenHeight = getHeight();
+        screenWidth = getWidth();
+        screenHeight = getHeight();
 
         platforms.clear();
         int numPlatforms = 18;
@@ -49,6 +51,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             float py = screenHeight - i * verticalSpacing;
             platforms.add(new Platform(px, py, platformWidth, platformHeight));
         }
+
+
+        float playerWidth =  80f;
+        float playerHeight = 80f;
+        float startX = screenWidth / 2f - playerWidth / 2f;
+        float startY = screenHeight - playerHeight;
+        player = new Player(startX, startY, playerWidth, playerHeight);
+
+        player.jump();
+
+
     }
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
@@ -76,6 +89,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         for (Platform p : platforms) {
             p.draw(canvas, paint);
         }
+        if (player != null) {
+            player.draw(canvas, paint);
+        }
 
 //        // Temporary red block to represent player (for testing)
 //        paint.setColor(Color.RED);
@@ -90,6 +106,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 //                p.x = (float) (Math.random() * getWidth());
 //            }
 //        }
+        player.update();
 
     }
     private void drawBackground(Canvas canvas) {
