@@ -14,7 +14,7 @@ public class Platform {
     }
 
     public void draw(Canvas canvas, Paint paint) {
-        paint.setColor(0xFF4CAF50); // bright green like Doodle Jump
+        paint.setColor(0xFF4CAF50); // bright green
         canvas.drawRoundRect(x, y, x + width, y + height, 15, 15, paint);
     }
 }

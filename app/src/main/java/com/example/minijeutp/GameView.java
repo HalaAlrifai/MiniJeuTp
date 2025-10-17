@@ -8,6 +8,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import com.example.minijeutp.entity.Platform;
+import com.example.minijeutp.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,9 +25,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         getHolder().addCallback(this);
         thread = new GameThread(getHolder(), this);
         setFocusable(true);
-
-
     }
+
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int
             width, int height) {
