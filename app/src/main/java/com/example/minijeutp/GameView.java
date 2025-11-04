@@ -21,15 +21,14 @@ import java.util.List;
 
 public class GameView extends SurfaceView implements SurfaceHolder.Callback, SensorEventListener{
     private GameThread thread;
-    private int x =0;
     private Player player;
     public static int screenWidth, screenHeight;
     private List<Platform> platforms = new ArrayList<>();
 
-
+    // Capteur
     private SensorManager sensorManager;
     private Sensor accelerometer;
-    private float ax = 0; // valeur actuelle du capteur
+    private float ax = 0;
 
     public GameView(Context context) {
         super(context);
@@ -49,14 +48,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
     }
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        thread.setRunning(true);
-        thread.start();
         screenWidth = getWidth();
         screenHeight = getHeight();
+
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
         }
 
+        // Création des plateformes
         platforms.clear();
         int numPlatforms = 10;
         float platformWidth = screenWidth / 5f;
@@ -69,17 +68,19 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
             platforms.add(new Platform(px, py, platformWidth, platformHeight));
         }
 
-
-        float playerWidth =  80f;
+        // Création du joueur
+        float playerWidth = 80f;
         float playerHeight = 80f;
         float startX = screenWidth / 2f - playerWidth / 2f;
         float startY = screenHeight - playerHeight;
         player = new Player(startX, startY, playerWidth, playerHeight);
+        player.vy = -25; // saut initial
 
-        player.jump();
-
-
+        // Démarrage du thread
+        thread.setRunning(true);
+        thread.start();
     }
+
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         boolean retry = true;
@@ -87,69 +88,88 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
             try {
                 thread.setRunning(false);
                 thread.join();
+                retry = false;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            retry = false;
         }
         sensorManager.unregisterListener(this);
     }
+
     @Override
     public void draw(Canvas canvas) {
         super.draw(canvas);
         if (canvas == null) return;
 
-        // Background
         drawBackground(canvas);
 
-        // Draw platforms
         Paint paint = new Paint();
+
+        // Plateformes
         for (Platform p : platforms) {
             p.draw(canvas, paint);
         }
+
+        // Joueur
         if (player != null) {
             player.draw(canvas, paint);
         }
 
-//        // Temporary red block to represent player (for testing)
-//        paint.setColor(Color.RED);
-//        canvas.drawRect(x, 100, x + 80, 180, paint);
+        // Score
+        paint.setColor(Color.BLACK);
+        paint.setTextSize(60);
+        paint.setFakeBoldText(true);
+        canvas.drawText("Score: " + player.Score, 50, 80, paint);
+
     }
+
     public void update() {
         if (player != null) {
             player.update(platforms);
 
-            // Déplacement horizontal selon le capteur
-            player.x -= ax * 5; // ajuster le 5 pour la sensibilité
+            // --- Déplacement horizontal via capteur ---
+            player.x -= ax * 5;
 
-            // Gérer les bords de l’écran (wrap-around comme Doodle Jump)
+            // Gestion des bords (wrap-around)
             if (player.x < -player.width) {
                 player.x = screenWidth;
             } else if (player.x > screenWidth) {
                 player.x = -player.width;
             }
+
+
+            if (player.vy < 0 && player.y < screenHeight / 1.4f) {
+                float offset = -player.vy;
+
+
+                player.y += offset;
+
+
+                for (Platform p : platforms) {
+                    p.y += offset;
+
+
+                    if (p.y > screenHeight) {
+                        p.y = 0;
+                        p.x = (float) (Math.random() * (screenWidth - p.width));
+                    }
+                }
+            }
         }
     }
-       // x = (x + 1) % 300;
-//        for (Platform p : platforms) {
-//            p.y += 2; // move downward slowly
-//            if (p.y > getHeight()) {
-//                p.y = 0;
-//                p.x = (float) (Math.random() * getWidth());
+
 
     private void drawBackground(Canvas canvas) {
         int width = getWidth();
         int height = getHeight();
 
-        // Cream-colored paper background
         canvas.drawColor(Color.rgb(255, 250, 245));
 
-        // Draw the light gray grid lines
         Paint gridPaint = new Paint();
         gridPaint.setColor(Color.rgb(220, 220, 220));
         gridPaint.setStrokeWidth(1);
 
-        int gridSize = 40; // spacing between lines
+        int gridSize = 40;
         for (int x = 0; x < width; x += gridSize) {
             canvas.drawLine(x, 0, x, height, gridPaint);
         }
@@ -157,22 +177,19 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
             canvas.drawLine(0, y, width, y, gridPaint);
         }
 
-        // Optional: a faint blue margin at the top (like a notebook)
         Paint marginPaint = new Paint();
         marginPaint.setColor(Color.rgb(210, 220, 255));
         canvas.drawRect(0, 0, width, 60, marginPaint);
     }
+
+    // --- Accéléromètre ---
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            ax = event.values[0]; // valeur de l’inclinaison
+            ax = event.values[0];
         }
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // pas nécessaire ici
-    }
-
-
+    public void onAccuracyChanged(Sensor sensor, int accuracy) { }
 }
