@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
@@ -25,7 +26,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
     public static int screenWidth, screenHeight;
     private List<Platform> platforms = new ArrayList<>();
 
-    // Capteur
+    private boolean isGameOver = false;
+    private float fallSpeed = 0;
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private float ax = 0;
@@ -36,7 +38,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         thread = new GameThread(getHolder(), this);
         setFocusable(true);
 
-        // Capteur d’accélération
+        // Capteur d’acc.
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -114,49 +116,63 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         if (player != null) {
             player.draw(canvas, paint);
         }
+        if (isGameOver) {
+            drawGameOver(canvas);
+        }
+
 
         // Score
         paint.setColor(Color.BLACK);
-        paint.setTextSize(60);
+        paint.setTextSize(40);
         paint.setFakeBoldText(true);
-        canvas.drawText("Score: " + player.Score, 50, 80, paint);
+        canvas.drawText("Score: " + player.Score, 50, 45, paint);
 
     }
 
     public void update() {
-        if (player != null) {
-            player.update(platforms);
-
-            // --- Déplacement horizontal via capteur ---
-            player.x -= ax * 5;
-
-            // Gestion des bords (wrap-around)
-            if (player.x < -player.width) {
-                player.x = screenWidth;
-            } else if (player.x > screenWidth) {
-                player.x = -player.width;
-            }
+        if (player == null) return;
 
 
-            if (player.vy < 0 && player.y < screenHeight / 1.4f) {
-                float offset = -player.vy;
+//        if (isGameOver) {
+//            player.y += fallSpeed;
+//            fallSpeed += 1;
+//            return;
+//        }
 
 
-                player.y += offset;
+        player.update(platforms);
+
+        if (player.y > screenHeight) {
+            isGameOver = true;
+            fallSpeed = 10;
+            return;
+        }
+
+        player.x -= ax * 5;
+
+        if (player.x < -player.width) {
+            player.x = screenWidth;
+        } else if (player.x > screenWidth) {
+            player.x = -player.width;
+        }
 
 
-                for (Platform p : platforms) {
-                    p.y += offset;
+        if (player.vy < 0 && player.y < screenHeight / 1.4f) {
+            float offset = -player.vy;
+            player.y += offset;
 
 
-                    if (p.y > screenHeight) {
-                        p.y = 0;
-                        p.x = (float) (Math.random() * (screenWidth - p.width));
-                    }
+            for (Platform p : platforms) {
+                p.y += offset;
+
+                if (p.y > screenHeight) {
+                    p.y = 0;
+                    p.x = (float) (Math.random() * (screenWidth - p.width));
                 }
             }
         }
     }
+
 
 
     private void drawBackground(Canvas canvas) {
@@ -192,4 +208,57 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) { }
+    private void drawGameOver(Canvas canvas) {
+        Paint paint = new Paint();
+        paint.setColor(Color.argb(200, 255, 255, 255)); // fond semi-transparent
+        canvas.drawRect(0, 0, screenWidth, screenHeight, paint);
+
+        Paint text = new Paint();
+        text.setColor(Color.BLACK);
+        text.setTextSize(70);
+        text.setFakeBoldText(true);
+        text.setTextAlign(Paint.Align.CENTER);
+
+        canvas.drawText("GAME OVER", screenWidth / 2f, screenHeight / 2f, text);
+        text.setTextSize(40);
+        canvas.drawText("Score: " + player.Score, screenWidth / 2f, screenHeight / 2f + 60, text);
+        canvas.drawText("Tap to restart", screenWidth / 2f, screenHeight / 2f + 150, text);
+    }
+
+
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (isGameOver && event.getAction() == MotionEvent.ACTION_DOWN) {
+            resetGame();
+        }
+        return true;
+    }
+
+    private void resetGame() {
+        isGameOver = false;
+        player.Score = 0;
+
+        // recréer les plateformes
+        platforms.clear();
+        int numPlatforms = 10;
+        float platformWidth = screenWidth / 5f;
+        float platformHeight = 20f;
+        float verticalSpacing = screenHeight / numPlatforms;
+
+        for (int i = 0; i < numPlatforms; i++) {
+            float px = (float) (Math.random() * (screenWidth - platformWidth));
+            float py = screenHeight - i * verticalSpacing;
+            platforms.add(new Platform(px, py, platformWidth, platformHeight));
+        }
+
+        // replacer le joueur
+        float playerWidth = 80f;
+        float playerHeight = 80f;
+        float startX = screenWidth / 2f - playerWidth / 2f;
+        float startY = screenHeight - playerHeight;
+        player = new Player(startX, startY, playerWidth, playerHeight);
+        player.vy = -25;
+    }
+
 }
