@@ -23,6 +23,8 @@ import java.util.List;
 public class GameView extends SurfaceView implements SurfaceHolder.Callback, SensorEventListener{
     private GameThread thread;
     private Player player;
+    private boolean showStart = true;
+
     public static int screenWidth, screenHeight;
     private List<Platform> platforms = new ArrayList<>();
 
@@ -31,6 +33,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private float ax = 0;
+
+    private float lightLevel = 1000f;
+    private Sensor lightSensor;
+
 
     public GameView(Context context) {
         super(context);
@@ -42,6 +48,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+            if (lightSensor != null) {
+                sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL);
+            }
+
+            if (accelerometer != null) {
+                sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+            }
         }
     }
     @Override
@@ -126,12 +140,30 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         paint.setTextSize(40);
         paint.setFakeBoldText(true);
         canvas.drawText("Score: " + player.Score, 50, 45, paint);
+        if (showStart) {
+            Paint mask = new Paint();
+            mask.setColor(Color.argb(150, 0, 0, 0));
+            canvas.drawRect(0, 0, getWidth(), getHeight(), mask);
+
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            p.setColor(Color.WHITE);
+            p.setTextSize(64f);
+            p.setFakeBoldText(true);
+            String title = "Doodle Jump";
+            float tw = p.measureText(title);
+            canvas.drawText(title, (getWidth()-tw)/2f, getHeight()*0.42f, p);
+
+            p.setTextSize(42f);
+            String tip = "Touch to Start";
+            float ww = p.measureText(tip);
+            canvas.drawText(tip, (getWidth()-ww)/2f, getHeight()*0.58f, p);
+        }
 
     }
 
     public void update() {
         if (player == null) return;
-
+        if (showStart) return;
 
 //        if (isGameOver) {
 //            player.y += fallSpeed;
@@ -179,7 +211,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         int width = getWidth();
         int height = getHeight();
 
-        canvas.drawColor(Color.rgb(255, 250, 245));
+        if (lightLevel < 50f) {
+            canvas.drawColor(Color.BLACK);
+        } else {
+            canvas.drawColor(Color.rgb(240, 240, 255));
+        }
 
         Paint gridPaint = new Paint();
         gridPaint.setColor(Color.rgb(220, 220, 220));
@@ -203,6 +239,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             ax = event.values[0];
+        }else if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
+            lightLevel = event.values[0];
         }
     }
 
@@ -229,11 +267,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (isGameOver && event.getAction() == MotionEvent.ACTION_DOWN) {
-            resetGame();
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            if (showStart) {
+                showStart = false;
+            } else if (isGameOver) {
+                resetGame();
+            }
         }
         return true;
     }
+
 
     private void resetGame() {
         isGameOver = false;
