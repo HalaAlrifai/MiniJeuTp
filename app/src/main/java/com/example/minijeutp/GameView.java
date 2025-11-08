@@ -29,13 +29,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
     private List<Platform> platforms = new ArrayList<>();
 
     private boolean isGameOver = false;
-    private float fallSpeed = 0;
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private float ax = 0;
 
     private float lightLevel = 1000f;
     private Sensor lightSensor;
+
+    private Platform.Type randomType() {
+        double r = Math.random();
+        if (r < 0.70) return Platform.Type.NORMAL;
+        if (r < 0.95) return Platform.Type.BREAKABLE;
+        return Platform.Type.BOOST;
+    }
+
 
 
     public GameView(Context context) {
@@ -81,7 +88,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         for (int i = 0; i < numPlatforms; i++) {
             float px = (float) (Math.random() * (screenWidth - platformWidth));
             float py = screenHeight - i * verticalSpacing;
-            platforms.add(new Platform(px, py, platformWidth, platformHeight));
+            Platform.Type t = randomType();
+            platforms.add(new Platform(px, py, platformWidth, platformHeight, t));
+
         }
 
         // Création du joueur
@@ -176,7 +185,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
 
         if (player.y > screenHeight) {
             isGameOver = true;
-            fallSpeed = 10;
             return;
         }
 
@@ -200,6 +208,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
                 if (p.y > screenHeight) {
                     p.y = 0;
                     p.x = (float) (Math.random() * (screenWidth - p.width));
+                    p.setType(randomType());
                 }
             }
         }
@@ -292,7 +301,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         for (int i = 0; i < numPlatforms; i++) {
             float px = (float) (Math.random() * (screenWidth - platformWidth));
             float py = screenHeight - i * verticalSpacing;
-            platforms.add(new Platform(px, py, platformWidth, platformHeight));
+            Platform.Type t = randomType();
+            platforms.add(new Platform(px, py, platformWidth, platformHeight, t));
+
         }
 
         // replacer le joueur

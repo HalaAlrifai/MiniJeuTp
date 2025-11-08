@@ -24,33 +24,30 @@ public class Player {
     }
 
     public void update(List<Platform> platforms) {
-
         vy += gravity;
+        float prevY = y;
         y += vy;
 
+        float prevBottom = prevY + height;
+        float currBottom = y + height;
 
         for (Platform p : platforms) {
-            boolean withinX = x + width > p.x && x < p.x + p.width;
-            boolean hittingTop = y + height >= p.y && y + height <= p.y + vy + 10;
-
-            if (withinX && hittingTop && vy > 0) {
-
+            if (!p.active) continue;
+            boolean falling = vy > 0;
+            boolean withinX = (x + width > p.x) && (x < p.x + p.width);
+            boolean crossedTop = (prevBottom <= p.y) && (currBottom >= p.y);
+            if (falling && withinX && crossedTop) {
                 y = p.y - height;
-                vy = -25;
-                jumping = true;
-
-
+                p.onLand(this);
+                if (vy < 0f) jumping = true;
                 if (p != lastPlatformTouched) {
                     Score += 10;
                     lastPlatformTouched = p;
                 }
+                break;
             }
         }
-
     }
-
-
-
 
     public void draw(Canvas canvas, Paint paint) {
         paint.setColor(Color.rgb(200, 20, 0));
